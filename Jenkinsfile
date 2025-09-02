@@ -1,8 +1,8 @@
 pipeline {
   agent any
   environment {
-    IMAGE = "simonbekele/my-static-app:${env.BUILD_NUMBER}"
-    LATEST = "simonbekele/my-static-app:latest"
+    IMAGE = "simonbekele/my-test:${env.BUILD_NUMBER}"
+    LATEST = "simonbekele/my-test:latest"
   }
   stages {
     stage('Checkout') {
