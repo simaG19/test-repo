@@ -12,29 +12,38 @@ pipeline {
     stage('Build image') {
       steps {
         script {
-          // Build the image (uses Docker on the agent)
-          def img = docker.build(env.IMAGE)
-          // tag as latest as well
-          img.tag("latest")
+          // Force unix socket and clear TLS envs for the docker CLI used in this shell
+          sh '''
+            echo "Using docker via unix socket..."
+            export DOCKER_HOST=unix:///var/run/docker.sock
+            unset DOCKER_TLS_VERIFY
+            unset DOCKER_CERT_PATH
+            docker version
+            docker build -t ${IMAGE} .
+            docker tag ${IMAGE} ${LATEST}
+          '''
         }
       }
     }
 
     stage('Push image') {
       steps {
-        // Use the credentials id you created in Jenkins
         withCredentials([usernamePassword(credentialsId: 'docker-hub-creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
           script {
-            // Login + push using the Docker pipeline helpers
-            docker.withRegistry('', 'docker-hub-creds') {
-              docker.image(env.IMAGE).push()
-              docker.image(env.LATEST).push()
-            }
+            sh '''
+              export DOCKER_HOST=unix:///var/run/docker.sock
+              unset DOCKER_TLS_VERIFY
+              unset DOCKER_CERT_PATH
+              echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
+              docker push ${IMAGE}
+              docker push ${LATEST}
+            '''
           }
         }
       }
     }
   }
+
   post {
     always {
       echo "Build ${env.BUILD_NUMBER} finished. Check logs above for details."
